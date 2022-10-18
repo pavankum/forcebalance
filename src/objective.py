@@ -37,7 +37,9 @@ except:
     logger.warning("OpenMM module import failed; check OpenMM package\n")
 
 try:
-    from forcebalance.smirnoffio import AbInitio_SMIRNOFF, Liquid_SMIRNOFF, Vibration_SMIRNOFF, Hessian_SMIRNOFF, OptGeoTarget_SMIRNOFF, TorsionProfileTarget_SMIRNOFF, smirnoff_analyze_parameter_coverage
+    from forcebalance.smirnoffio import AbInitio_SMIRNOFF, Liquid_SMIRNOFF, Vibration_SMIRNOFF, Hessian_SMIRNOFF, \
+    OptGeoTarget_SMIRNOFF, TorsionProfileTarget_SMIRNOFF, smirnoff_analyze_parameter_coverage, \
+    EnergyLevelsTarget_SMIRNOFF
 except:
     logger.warning(traceback.format_exc())
     logger.warning("SMIRNOFF module import failed; check SMIRNOFF package\n")
@@ -128,6 +130,7 @@ Implemented_Targets = {
     'EVALUATOR_SMIRNOFF': Evaluator_SMIRNOFF,
     'RECHARGE_SMIRNOFF': Recharge_SMIRNOFF,
     'REMOTE_TARGET':RemoteTarget,
+    'ENERGYLEVELS_SMIRNOFF':EnergyLevelsTarget_SMIRNOFF,
     }
 
 

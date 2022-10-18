@@ -36,6 +36,8 @@ from forcebalance.output import getLogger
 from forcebalance.openmmio import OpenMM, UpdateSimulationParameters
 import json
 
+from forcebalance.energy_levels import EnergyLevelsTarget
+
 logger = getLogger(__name__)
 try:
     from simtk.openmm.app import *
@@ -772,6 +774,26 @@ class TorsionProfileTarget_SMIRNOFF(TorsionProfileTarget):
     def submit_jobs(self, mvals, AGrad=False, AHess=False):
         # we update the self.pgrads here so it's not overwritten in rtarget.py
         smirnoff_update_pgrads(self)
+
+
+class EnergyLevelsTarget_SMIRNOFF(EnergyLevelsTarget):
+    """ Force and energy matching using SMIRKS native Open Force Field (SMIRNOFF). """
+    def __init__(self,options,tgt_opts,forcefield):
+        ## Default file names for coordinates and key file.
+        self.set_option(tgt_opts,'pdb',default="conf.pdb")
+        # List of .mol2 files for SMIRNOFF to set up the system
+        self.set_option(tgt_opts,'mol2',forceprint=True)
+        self.set_option(tgt_opts,'coords',default="scan.xyz")
+        self.set_option(tgt_opts,'openmm_precision','precision',default="double", forceprint=True)
+        self.set_option(tgt_opts,'openmm_platform','platname',default="Reference", forceprint=True)
+        self.engine_ = SMIRNOFF
+        ## Initialize base class.
+        super(EnergyLevelsTarget_SMIRNOFF,self).__init__(options,tgt_opts,forcefield)
+
+    def submit_jobs(self, mvals, AGrad=False, AHess=False):
+        # we update the self.pgrads here so it's not overwritten in rtarget.py
+        smirnoff_update_pgrads(self)
+
 
 # class BindingEnergy_SMIRNOFF(BindingEnergy):
 #     """ Binding energy matching using OpenMM. """
