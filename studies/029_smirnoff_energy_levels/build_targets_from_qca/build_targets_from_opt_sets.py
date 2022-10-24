@@ -6,11 +6,13 @@ from openeye import oechem
 from pathlib import Path
 import os
 
-sage_training_set = OptimizationResultCollection.parse_file(
-    '/home/maverick/Desktop/OpenFF/openff-sage/data-set-curation/quantum-chemical/data-sets/1-2-0-opt-set-v3.json')
+# Using Sage training set (OptimizationResultCollection)
+sage_training_set = OptimizationResultCollection.parse_file('1-2-0-opt-set-v3.json')
 
+# Downloading the records for all the QCA IDs in the json file above
 records_and_molecules = sage_training_set.to_records()
 
+# Writing to a pickle file
 with open('filename.pickle', 'wb') as handle:
     pickle.dump(records_and_molecules, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -26,11 +28,12 @@ for record, molecule in records_and_molecules:
     smiles = molecule.to_smiles(isomeric=False, explicit_hydrogens=True)
     grouped_molecules[smiles].append((record, molecule))
 
-
+# Create targets directory and write the input files
 Path("./targets").mkdir(parents=True, exist_ok=True)
 targets_input = open('./targets/energy_levels.in', 'w')
 targets_excluded = open('./targets/targets_with_single_conformer_excluded.txt', 'w')
 
+# Iterate over the molecules and the grouped together conformers
 i = 0
 for key, value in grouped_molecules.items():
     # Check whether there are at least two conformers to take energy difference
@@ -43,7 +46,7 @@ for key, value in grouped_molecules.items():
 
     target_dir = './targets/EL_QCA-' + str(i) + '-' + molecule.hill_formula
     name = os.path.basename(target_dir)
-    # Add target to optimize.in
+    # Write targets to a file that can be used in optimize.in
     targets_input.write(f"$target \n"
                         f"  name {name}\n"
                         f"  type EnergyLevels_SMIRNOFF\n"
@@ -58,7 +61,7 @@ for key, value in grouped_molecules.items():
                         f"$end\n"
                         f"\n")
 
-    # Create target directory for this molecule QCA-#_of_mol-hill_formula
+    # Create target directory for this molecule EL_QCA-ID-hill_formula
 
     Path(target_dir).mkdir(parents=True, exist_ok=True)
 
