@@ -67,7 +67,8 @@ mol2 GNT-all.sdf
 pdb GNT-all.pdb
 coords GNT-all.xyz
 writelevel 2
-attenuate 0
+attenuate 1
+restrain_k 0.0 #kcal/mol
 energy_denom 1.0
 energy_upper 5.0
 openmm_platform Reference
