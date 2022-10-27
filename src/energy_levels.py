@@ -44,6 +44,8 @@ class EnergyLevelsTarget(Target):
         self.sys_opts = self.parse_optgeo_options(self.optgeo_options)
         ## Attenuate the weights as a function of energy
         self.set_option(tgt_opts, 'attenuate', 'attenuate')
+        ## Harmonic restraint for non-torsion atoms in kcal/mol.
+        self.set_option(tgt_opts, 'restrain_k', 'restrain_k')
         ## Energy denominator for objective function
         self.set_option(tgt_opts, 'energy_denom', 'energy_denom')
         ## Set upper cutoff energy
@@ -224,25 +226,7 @@ class EnergyLevelsTarget(Target):
         self.smin = np.argmin(self.eqm)
         logger.info("Referencing all energies to the snapshot %i (minimum energy structure in QM)\n" % self.smin)
 
-        if self.attenuate:
-            # Attenuate energies by an amount proportional to their
-            # value above the minimum.
-            eqm1 = self.eqm - np.min(self.eqm)
-            denom = self.energy_denom
-            upper = self.energy_upper
-            self.wts = np.ones(self.ns)
-            for i in range(self.ns):
-                if eqm1[i] > upper:
-                    self.wts[i] = 0.0
-                elif eqm1[i] < denom:
-                    self.wts[i] = 1.0 / denom
-                else:
-                    self.wts[i] = 1.0 / np.sqrt(denom ** 2 + (eqm1[i] - denom) ** 2)
-        else:
-            self.wts = np.ones(self.ns)
 
-        # Normalize weights.
-        self.wts /= sum(self.wts)
 
     def indicate(self):
         title_str = "Energy Levels: %s, Objective = % .5e, Units = kcal/mol, Angstrom" % (self.name, self.objective)
@@ -258,6 +242,9 @@ class EnergyLevelsTarget(Target):
         Answer = {'X': 0.0, 'G': np.zeros(self.FF.np), 'H': np.zeros((self.FF.np, self.FF.np))}
         self.PrintDict = OrderedDict()
 
+        def switching_function(x):
+            return 0.5 + 0.5 * np.tanh(x)
+
         def compute(mvals_, indicate=False):
             self.FF.make(mvals_)
             M_opts = None
@@ -268,7 +255,7 @@ class EnergyLevelsTarget(Target):
             all_rmsd = {}
             # Adding RMSD + ddE
             for i in range(self.ns):
-                energy, rmsd, M_opt = self.engine.optimize(shot=i)
+                energy, rmsd, M_opt = self.engine.optimize(shot=i, align=False)
                 # Create a molecule object to hold the MM-optimized structures
                 compute.emm.append(energy)
                 compute.rmsd.append(rmsd)
@@ -317,13 +304,35 @@ class EnergyLevelsTarget(Target):
             compute.emm -= compute.emm[self.smin]
             compute.rmsd = np.array(compute.rmsd)
             compute.total_ic_diff = np.array(compute.total_ic_diff)
+
+            if self.attenuate:
+                # Attenuate energies by an amount proportional to their
+                # value above the minimum and also including ddE.
+                #
+                ddE = compute.emm - self.eqm
+                E_a = self.energy_upper
+                self.wts = np.ones(self.ns)
+                # weight = 1 + 1    if ddE < E_a, dE_QM < E_a
+                #        = 1 + 0    if ddE < E_a, dE_QM > E_a
+                #        = 0 + 1    if ddE > E_a, dE_QM < E_a
+                #        = 0 + 0    if ddE > E_a, dE_QM > E_a
+                for i in range(self.ns):
+                    self.wts[i] = switching_function(E_a - ddE[i]) + switching_function(E_a - self.eqm[i])
+            else:
+                self.wts = np.ones(self.ns)
+
+            # Normalize weights.
+            self.wts /= sum(self.wts)
+            # print(self.wts)
+            # print(ddE)
+
             if indicate:
                 if self.writelevel > 0:
                     energy_comparison = np.array([
                         self.eqm,
                         compute.emm,
                         compute.emm - self.eqm,
-                        np.sqrt(self.wts) / self.energy_denom
+                        np.sqrt(self.wts)
                     ]).T
                     np.savetxt("EnergyCompare.txt", energy_comparison,
                                header="%11s  %12s  %12s  %12s" % ("QMEnergy", "MMEnergy", "Delta(MM-QM)", "Weight"),
@@ -481,7 +490,10 @@ class EnergyLevelsTarget(Target):
 
                     except ImportError:
                         logger.warning("matplotlib package is needed to make torsion profile plots\n")
-            return  (np.sqrt(self.wts) / self.energy_denom) * (compute.emm - self.eqm) + ((np.sqrt(self.wts)/2 * compute.total_ic_diff))
+
+
+
+            return  (np.sqrt(self.wts)) * (compute.emm - self.eqm) #+ ((np.sqrt(self.wts)/2 * compute.total_ic_diff))
 
         compute.emm = None
         compute.rmsd = None
