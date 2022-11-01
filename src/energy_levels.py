@@ -44,16 +44,20 @@ class EnergyLevelsTarget(Target):
         self.sys_opts = self.parse_optgeo_options(self.optgeo_options)
         ## Attenuate the weights as a function of energy
         self.set_option(tgt_opts, 'attenuate', 'attenuate')
+        ## Calculate internal coordinates or not
+        self.set_option(tgt_opts, 'calc_IC', 'calc_IC')
         ## Harmonic restraint for non-torsion atoms in kcal/mol.
         self.set_option(tgt_opts, 'restrain_k', 'restrain_k')
         ## Energy denominator for objective function
         self.set_option(tgt_opts, 'energy_denom', 'energy_denom')
         ## Set upper cutoff energy
         self.set_option(tgt_opts, 'energy_upper', 'energy_upper')
+        ## Set e_width in the switching function
+        self.set_option(tgt_opts, 'e_width', 'e_width')
         ## Read in the reference data.
         self.read_reference_data()
         ## Create internal coordinates
-        self._build_internal_coordinates()
+        # self._build_internal_coordinates()
         self._setup_scale_factors()
         ## Build keyword dictionaries to pass to engine.
         engine_args = OrderedDict(list(self.OptionDict.items()) + list(options.items()))
@@ -242,8 +246,8 @@ class EnergyLevelsTarget(Target):
         Answer = {'X': 0.0, 'G': np.zeros(self.FF.np), 'H': np.zeros((self.FF.np, self.FF.np))}
         self.PrintDict = OrderedDict()
 
-        def switching_function(x):
-            return 0.5 + 0.5 * np.tanh(x)
+        def switching_function(x, w):
+            return 0.5 + 0.5 * np.tanh(x/w)
 
         def compute(mvals_, indicate=False):
             self.FF.make(mvals_)
@@ -261,40 +265,41 @@ class EnergyLevelsTarget(Target):
                 compute.rmsd.append(rmsd)
                 # extract the final geometry and calculate the internal coords after optimization
                 opt_pos = self.engine.getContextPosition()
-                v_ic = self.get_internal_coords(shot=i, positions=opt_pos)
-                # get the reference values in internal coords
-                vref_bonds = self.internal_coordinates[i]['vref_bonds']
-                vref_angles = self.internal_coordinates[i]['vref_angles']
-                vref_dihedrals = self.internal_coordinates[i]['vref_dihedrals']
-                vref_impropers = self.internal_coordinates[i]['vref_impropers']
-                vtar_bonds = v_ic['bonds']
-                diff_bond = (abs(vref_bonds - vtar_bonds) * self.scale_bond).tolist() if self.n_bonds > 0 else []
-                # print("bonds", diff_bond)
-                # objective contribution from angles
-                vtar_angles = v_ic['angles']
-                diff_angle = (
-                            abs(periodic_diff(vref_angles, vtar_angles, 360)) * self.scale_angle).tolist() if self.n_angles > 0 else []
-                # print("angles", diff_angle)
-                # objective contribution from dihedrals
-                vtar_dihedrals = v_ic['dihedrals']
-                diff_dihedral = (abs(periodic_diff(vref_dihedrals, vtar_dihedrals,
-                                               360)) * self.scale_dihedral).tolist() if self.n_dihedrals > 0 else []
-                # print("dihedrals", diff_dihedral)
-                # objective contribution from improper dihedrals
-                vtar_impropers = v_ic['impropers']
-                diff_improper = (abs(periodic_diff(vref_impropers, vtar_impropers,
-                                               360)) * self.scale_improper).tolist() if self.n_impropers > 0 else []
-                # print("impropers", diff_improper)
-                # combine objective values into a big result list
-                sys_obj_list = diff_bond + diff_angle + diff_dihedral + diff_improper
-                # store
-                all_diff[i] = dict(bonds=diff_bond, angle=diff_angle, dihedral=diff_dihedral, improper=diff_improper)
-                # compute the objective for just this conformer and add it to a list
-                compute.total_ic_diff.append(np.dot(sys_obj_list, sys_obj_list))
-                # make a list of rmsd values
-                current_rmsd = dict(bonds=compute_rmsd(vref_bonds, vtar_bonds), angle=compute_rmsd(vref_angles, vtar_angles, v_periodic=360),
-                                    dihedral=compute_rmsd(vref_dihedrals, vtar_dihedrals, v_periodic=360), improper=compute_rmsd(vref_impropers, vtar_impropers, v_periodic=360))
-                all_rmsd[i] = current_rmsd
+                if self.calc_IC:
+                    v_ic = self.get_internal_coords(shot=i, positions=opt_pos)
+                    # get the reference values in internal coords
+                    vref_bonds = self.internal_coordinates[i]['vref_bonds']
+                    vref_angles = self.internal_coordinates[i]['vref_angles']
+                    vref_dihedrals = self.internal_coordinates[i]['vref_dihedrals']
+                    vref_impropers = self.internal_coordinates[i]['vref_impropers']
+                    vtar_bonds = v_ic['bonds']
+                    diff_bond = (abs(vref_bonds - vtar_bonds) * self.scale_bond).tolist() if self.n_bonds > 0 else []
+                    # print("bonds", diff_bond)
+                    # objective contribution from angles
+                    vtar_angles = v_ic['angles']
+                    diff_angle = (
+                                abs(periodic_diff(vref_angles, vtar_angles, 360)) * self.scale_angle).tolist() if self.n_angles > 0 else []
+                    # print("angles", diff_angle)
+                    # objective contribution from dihedrals
+                    vtar_dihedrals = v_ic['dihedrals']
+                    diff_dihedral = (abs(periodic_diff(vref_dihedrals, vtar_dihedrals,
+                                                   360)) * self.scale_dihedral).tolist() if self.n_dihedrals > 0 else []
+                    # print("dihedrals", diff_dihedral)
+                    # objective contribution from improper dihedrals
+                    vtar_impropers = v_ic['impropers']
+                    diff_improper = (abs(periodic_diff(vref_impropers, vtar_impropers,
+                                                   360)) * self.scale_improper).tolist() if self.n_impropers > 0 else []
+                    # print("impropers", diff_improper)
+                    # combine objective values into a big result list
+                    sys_obj_list = diff_bond + diff_angle + diff_dihedral + diff_improper
+                    # store
+                    all_diff[i] = dict(bonds=diff_bond, angle=diff_angle, dihedral=diff_dihedral, improper=diff_improper)
+                    # compute the objective for just this conformer and add it to a list
+                    compute.total_ic_diff.append(np.dot(sys_obj_list, sys_obj_list))
+                    # make a list of rmsd values
+                    current_rmsd = dict(bonds=compute_rmsd(vref_bonds, vtar_bonds), angle=compute_rmsd(vref_angles, vtar_angles, v_periodic=360),
+                                        dihedral=compute_rmsd(vref_dihedrals, vtar_dihedrals, v_periodic=360), improper=compute_rmsd(vref_impropers, vtar_impropers, v_periodic=360))
+                    all_rmsd[i] = current_rmsd
 
                 if M_opts is None:
                     M_opts = deepcopy(M_opt)
@@ -311,13 +316,14 @@ class EnergyLevelsTarget(Target):
                 #
                 ddE = compute.emm - self.eqm
                 E_a = self.energy_upper
+                E_w = self.e_width
                 self.wts = np.ones(self.ns)
                 # weight = 1 + 1    if ddE < E_a, dE_QM < E_a
                 #        = 1 + 0    if ddE < E_a, dE_QM > E_a
                 #        = 0 + 1    if ddE > E_a, dE_QM < E_a
                 #        = 0 + 0    if ddE > E_a, dE_QM > E_a
                 for i in range(self.ns):
-                    self.wts[i] = switching_function(E_a - ddE[i]) + switching_function(E_a - self.eqm[i])
+                    self.wts[i] = switching_function(E_a - ddE[i], E_w) + switching_function(E_a - self.eqm[i], E_w)
             else:
                 self.wts = np.ones(self.ns)
 
@@ -492,8 +498,8 @@ class EnergyLevelsTarget(Target):
                         logger.warning("matplotlib package is needed to make torsion profile plots\n")
 
 
-
-            return  (np.sqrt(self.wts)) * (compute.emm - self.eqm) #+ ((np.sqrt(self.wts)/2 * compute.total_ic_diff))
+            # print("ddE contrib.:", (np.sqrt(self.wts)) * (compute.emm - self.eqm), "IC_rmsd:", compute.total_ic_diff)
+            return  (np.sqrt(self.wts)) * (compute.emm - self.eqm) #+ 0.1 * (np.sqrt(self.wts)/2) * compute.total_ic_diff
 
         compute.emm = None
         compute.rmsd = None
@@ -506,7 +512,8 @@ class EnergyLevelsTarget(Target):
         # Energy RMSE
         e_rmse = np.sqrt(np.dot(self.wts, (compute.emm - self.eqm) ** 2))
         # IC RMSE
-        r = (np.sqrt(self.wts) / 1 * compute.total_ic_diff)
+        if self.calc_IC:
+            r = (np.sqrt(self.wts) / 1 * compute.total_ic_diff)
 
         self.PrintDict[self.name] = \
             '%6.3f - %-6.3f   % 6.3f - %-6.3f    %6.3f    %7.4f   % 7.4f' % (
