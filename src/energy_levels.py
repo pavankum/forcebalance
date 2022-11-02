@@ -57,7 +57,8 @@ class EnergyLevelsTarget(Target):
         ## Read in the reference data.
         self.read_reference_data()
         ## Create internal coordinates
-        # self._build_internal_coordinates()
+        if self.calc_ic:
+            self._build_internal_coordinates()
         self._setup_scale_factors()
         ## Build keyword dictionaries to pass to engine.
         engine_args = OrderedDict(list(self.OptionDict.items()) + list(options.items()))
