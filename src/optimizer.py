@@ -27,6 +27,7 @@ from collections import OrderedDict
 import random
 import time, datetime
 from forcebalance.output import getLogger, DEBUG, CleanStreamHandler
+import glob
 logger = getLogger(__name__)
 
 # Global variable corresponding to the iteration number.
@@ -887,7 +888,8 @@ class Optimizer(forcebalance.BaseClass):
             Result = self.Objective.Full(xk_,0,verbose=False,customdir="micro_%02i" % search_fun.micro)['X'] - data['X']
 
             if not self.retain_micro_outputs:
-                shutil.rmtree("micro_%02i" % search_fun.micro)
+                for microo in glob.glob("**/micro_*", recursive=True):
+                    shutil.rmtree(microo)
 
             logger.info("Hessian diagonal search: H%+.4f*I, length %.4e, result % .4e\n" % ((L-1)**2,np.linalg.norm(dx),Result))
             search_fun.micro += 1
