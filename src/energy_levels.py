@@ -45,7 +45,7 @@ class EnergyLevelsTarget(Target):
         ## Attenuate the weights as a function of energy
         self.set_option(tgt_opts, 'attenuate', 'attenuate')
         ## Calculate internal coordinates or not
-        self.set_option(tgt_opts, 'calc_IC', 'calc_IC')
+        self.set_option(tgt_opts, 'calc_ic', 'calc_ic')
         ## Harmonic restraint for non-torsion atoms in kcal/mol.
         self.set_option(tgt_opts, 'restrain_k', 'restrain_k')
         ## Energy denominator for objective function
@@ -237,7 +237,7 @@ class EnergyLevelsTarget(Target):
         title_str = "Energy Levels: %s, Objective = % .5e, Units = kcal/mol, Angstrom" % (self.name, self.objective)
         # LPW: This title is carefully placed to align correctly
         column_head_str1 = "%-50s %-10s %-12s %-18s %-12s %-10s %-11s %-10s" % (
-        "System", "Min(QM)", "Min(MM)", "Range(QM)", "Range(MM)", "Max-RMSD", "ddE", "Obj-Fn")
+        "System", "Min(QM) - ", "Max(QM)", "Min(MM) - ", "Max(MM)", "Max-RMSD", "ddE", "Obj-Fn")
         printcool_dictionary(self.PrintDict, title=title_str + '\n' + column_head_str1, keywidth=50,
                              center=[True, False])
 
@@ -266,7 +266,7 @@ class EnergyLevelsTarget(Target):
                 compute.rmsd.append(rmsd)
                 # extract the final geometry and calculate the internal coords after optimization
                 opt_pos = self.engine.getContextPosition()
-                if self.calc_IC:
+                if self.calc_ic:
                     v_ic = self.get_internal_coords(shot=i, positions=opt_pos)
                     # get the reference values in internal coords
                     vref_bonds = self.internal_coordinates[i]['vref_bonds']
@@ -513,7 +513,7 @@ class EnergyLevelsTarget(Target):
         # Energy RMSE
         e_rmse = np.sqrt(np.dot(self.wts, (compute.emm - self.eqm) ** 2))
         # IC RMSE
-        if self.calc_IC:
+        if self.calc_ic:
             r = (np.sqrt(self.wts) / 1 * compute.total_ic_diff)
 
         self.PrintDict[self.name] = \
