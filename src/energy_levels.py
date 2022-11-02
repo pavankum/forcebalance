@@ -324,10 +324,10 @@ class EnergyLevelsTarget(Target):
                 E_b = self.energy_denom
                 E_w = self.e_width
                 self.wts = np.ones(self.ns)
-                # weight = 1 + 1    if ddE < E_a, dE_QM < E_a
-                #        = 1 + 0    if ddE < E_a, dE_QM > E_a
-                #        = 0 + 1    if ddE > E_a, dE_QM < E_a
-                #        = 0 + 0    if ddE > E_a, dE_QM > E_a
+                # weight = 1 + 1    if ddE > E_b, dE_QM << E_a
+                #        = 1 + 0    if ddE > E_b, dE_QM > E_a
+                #        = 0 + 1    if ddE ~ 0, dE_QM << E_a
+                #        = 0 + 0    if ddE ~ 0, dE_QM > E_a
                 for i in range(self.ns):
                     self.wts[i] = switching_function_qm(E_a - self.eqm[i], E_w) + switching_function_dde(E_b - abs(ddE[i]), E_w)
             else:
