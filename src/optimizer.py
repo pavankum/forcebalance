@@ -888,7 +888,7 @@ class Optimizer(forcebalance.BaseClass):
             Result = self.Objective.Full(xk_,0,verbose=False,customdir="micro_%02i" % search_fun.micro)['X'] - data['X']
 
             if not self.retain_micro_outputs:
-                for microo in glob.glob("micro_*"):
+                for microo in glob.glob("**/micro_*", recursive=True):
                     shutil.rmtree(microo)
 
             logger.info("Hessian diagonal search: H%+.4f*I, length %.4e, result % .4e\n" % ((L-1)**2,np.linalg.norm(dx),Result))
