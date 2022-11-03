@@ -251,7 +251,7 @@ class EnergyLevelsTarget(Target):
             return 0.5 + 0.5 * np.tanh(x/w)
 
         def switching_function_dde(x, w):
-            return 1 - np.tanh(x/w)
+            return 1 - np.tanh(x/(2*w))
 
 
         def compute(mvals_, indicate=False):
