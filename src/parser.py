@@ -274,7 +274,7 @@ tgt_opts_types = {
                  "vdw_cutoff"        : (None, -2, 'Cutoff for vdW interactions if different from other nonbonded interactions', 'Condensed phase property targets', 'liquid'),
                  "liquid_fdiff_h" : (1e-2, 0, 'Step size for finite difference derivatives for liquid targets in pure_num_grad', 'Condensed phase property targets', 'liquid'),
                  "restrain_k"     : (1.0, 0, 'Force constant for harmonic positional energy restraints', 'Torsion profile with MM relaxation target', 'torsionprofile'),
-                 "e_width"        : (1.0, 0, 'Width in the switching function, 0.5 + 0.5 * tanh((E_upper - E)/e_width), narrow means steep switch', 'Energy levels target', 'energylevels'),
+                 "e_width"        : (0.5, 0, 'Width in the switching function, 0.5 + 0.5 * tanh((E_upper - E)/e_width), narrow means steep switch', 'Energy levels target', 'energylevels'),
                  },
     'sections': {}
     }
