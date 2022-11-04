@@ -247,12 +247,8 @@ class EnergyLevelsTarget(Target):
         Answer = {'X': 0.0, 'G': np.zeros(self.FF.np), 'H': np.zeros((self.FF.np, self.FF.np))}
         self.PrintDict = OrderedDict()
 
-        def switching_function_qm(x, w):
+        def switching_function(x, w):
             return 0.5 + 0.5 * np.tanh(x/w)
-
-        def switching_function_dde(x, w):
-            return 1 - np.tanh(x/(2*w))
-
 
         def compute(mvals_, indicate=False):
             self.FF.make(mvals_)
@@ -319,23 +315,21 @@ class EnergyLevelsTarget(Target):
                 # Attenuate energies by an amount proportional to their
                 # value above the minimum and also including ddE.
                 #
-                ddE = compute.emm - self.eqm
+
                 E_a = self.energy_upper
-                E_b = self.energy_denom
                 E_w = self.e_width
                 self.wts = np.ones(self.ns)
-                # weight = 1 + 1    if ddE > E_b, dE_QM << E_a
-                #        = 1 + 0    if ddE > E_b, dE_QM > E_a
-                #        = 0 + 1    if ddE ~ 0, dE_QM << E_a
-                #        = 0 + 0    if ddE ~ 0, dE_QM > E_a
+                # weight = 1 + 1    if dE_QM < E_a, dE_MM < E_a
+                #        = 1 + 0    if dE_QM < E_a, dE_MM > E_a
+                #        = 0 + 1    if dE_QM > E_a, dE_MM < E_a
+                #        = 0 + 0    if dE_QM > E_a, dE_MM > E_a
                 for i in range(self.ns):
-                    self.wts[i] = switching_function_qm(E_a - self.eqm[i], E_w) + switching_function_dde(E_b - abs(ddE[i]), E_w)
+                    self.wts[i] = switching_function(E_a - self.eqm[i], E_w) + switching_function(E_a - compute.emm[i], E_w)
             else:
                 self.wts = np.ones(self.ns)
 
             # Normalize weights.
             self.wts /= sum(self.wts)
-            # print(self.wts)
             # print(ddE)
 
             if indicate:
