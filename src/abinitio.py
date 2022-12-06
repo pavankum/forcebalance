@@ -397,6 +397,7 @@ class AbInitio(Target):
             raise RuntimeError('Not sure what to do with energy_mode %s' % self.energy_mode)
 
         if len(self.fqm) > 0:
+            print(self.fqm)
             self.fqm = np.array(self.fqm)
             self.fqm *= fqcgmx
             self.qmatoms = list(range(int(self.fqm.shape[1]/3)))
@@ -437,17 +438,18 @@ class AbInitio(Target):
         if self.attenuate:
             # Attenuate energies by an amount proportional to their
             # value above the minimum.
+            # Modified weights similar to energy_levels.py
             eqm1 = self.eqm - np.min(self.eqm)
-            lower = self.energy_denom * 4.184 # kcal/mol to kJ/mol
-            upper = self.energy_upper * 4.184 # kcal/mol to kJ/mol
+            E_a = self.energy_upper
+            E_w = 1.0 #self.e_width
             self.boltz_wts = np.ones(self.ns)
+            # weight = 1 + 1    if dE_QM < E_a, dE_MM < E_a
+            #        = 1 + 0    if dE_QM < E_a, dE_MM > E_a
+            #        = 0 + 1    if dE_QM > E_a, dE_MM < E_a
+            #        = 0 + 0    if dE_QM > E_a, dE_MM > E_a
             for i in range(self.ns):
-                if eqm1[i] > upper:
-                    self.boltz_wts[i] = 0.0
-                elif eqm1[i] < lower:
-                    self.boltz_wts[i] = 1.0 / lower
-                else:
-                    self.boltz_wts[i] = 1.0 / np.sqrt(lower**2 + (eqm1[i]-lower)**2)
+                self.boltz_wts[i] = switching_function(E_a - self.eqm[i], E_w) + switching_function(E_a - compute.emm[i], E_w)
+            
             logger.info('Energy lower/upper limit for attenuating/cutting off weights is set to %.1f/%.1f kcal/mol.\n' % (lower, upper))
         else:
             self.boltz_wts = np.ones(self.ns)
