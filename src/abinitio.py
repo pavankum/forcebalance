@@ -217,6 +217,8 @@ class AbInitio(Target):
         self.save_vmvals = {}
         self.set_option(None, 'shots', val=self.ns)
         self.M_orig = None
+    def switching_function(x, w):
+            return 0.5 + 0.5 * np.tanh(x/w)
 
     def build_invdist(self, mvals):
         for i in self.pgrad:
