@@ -46,15 +46,16 @@ for key, value in grouped_molecules.items():
 
     target_dir = './targets/EL_QCA-' + str(i) + '-' + molecule.hill_formula
     name = os.path.basename(target_dir)
-    # Write targets to a file that can be used in optimize.in
+    # Write targets to a file that can be used in optimize_debug.in
     targets_input.write(f"$target \n"
                         f"  name {name}\n"
                         f"  type EnergyLevels_SMIRNOFF\n"
-                        f"  mol2 mol-{i}.sdf\n"
+                        f"  mol2 mol-{i}.mol2\n"
                         f"  pdb mol-{i}.pdb\n"
                         f"  coords mol-{i}.xyz\n"
                         f"  writelevel 2\n"
-                        f"  attenuate 0\n"
+                        f"  attenuate 1\n"
+                        f"  restrain_k 1.0\n"
                         f"  energy_denom 1.0\n"
                         f"  energy_upper 5.0\n"
                         f"  openmm_platform Reference\n"
@@ -71,9 +72,9 @@ for key, value in grouped_molecules.items():
         energies.append(item[0].get_final_energy())
     energies = np.array(energies)
 
-    # Write XYZ file in sorted energies order and sdf, pdb files of a single conformer for FB topologies
+    # Write XYZ file in sorted energies order and mol2, pdb files of a single conformer for FB topologies
     oe_output_file_stream = oechem.oemolostream(target_dir+'/mol-'+str(i)+'.xyz')
-    oe_sdf_file_stream = oechem.oemolostream(target_dir + '/mol-' + str(i) + '.sdf')
+    oe_mol2_file_stream = oechem.oemolostream(target_dir + '/mol-' + str(i) + '.mol2')
     oe_pdb_file_stream = oechem.oemolostream(target_dir + '/mol-' + str(i) + '.pdb')
 
     # Write optgeo_options file within the energy level target directory
@@ -89,7 +90,7 @@ for key, value in grouped_molecules.items():
                 f"  name {name}\n"
                 f"  geometry mol-{i}.pdb\n "
                 f"  topology mol-{i}.xyz\n "
-                f"  mol2 mol-{i}.sdf\n"
+                f"  mol2 mol-{i}.mol2\n"
                 f"$end\n")
     qdata = open(target_dir + '/qdata.txt', 'w')
 
@@ -106,7 +107,7 @@ for key, value in grouped_molecules.items():
         if j == 0:
             for mol in oemol.GetConfs():
                 oechem.OESetSDData(mol, "SMILES", molecule.to_smiles(mapped=True))
-                oechem.OEWriteMolecule(oe_sdf_file_stream, mol)
+                oechem.OEWriteMolecule(oe_mol2_file_stream, mol)
                 oechem.OEWriteMolecule(oe_pdb_file_stream, mol)
                 break
 

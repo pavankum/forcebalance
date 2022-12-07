@@ -47,7 +47,7 @@ for key, value in grouped_molecules.items():
 
     target_dir = './targets/EL_QCA-' + str(i) + '-' + molecule.hill_formula
     name = os.path.basename(target_dir)
-    # Write targets to a file that can be used in optimize.in
+    # Write targets to a file that can be used in optimize_debug.in
     targets_input.write(f"$target \n"
                         f"  name {name}\n"
                         f"  type EnergyLevels_SMIRNOFF\n"
@@ -60,6 +60,7 @@ for key, value in grouped_molecules.items():
                         f"  energy_denom 1.0\n"
                         f"  energy_upper 5.0\n"
                         f"  e_width 0.5\n"
+                        f"  weight 10.0\n"
                         f"  openmm_platform Reference\n"
                         f"$end\n"
                         f"\n")
@@ -92,8 +93,8 @@ for key, value in grouped_molecules.items():
         ],
         "name": ', '.join(record_ids),
         "xyzs": xyzs,
-        "qm_energies": list(energies),
-        "comms": [f'QCA ID: {id}, Energy = {ener} hartree'for id, ener in zip(record_ids, energies)]
+        "qm_energies": list(np.sort(energies)),
+        "comms": [f'QCA ID: {id}, Energy = {ener} hartree'for id, ener in zip(record_ids, np.sort(energies))]
     }
     coord_file_name = f'{target_dir}/mol-{str(i)}'
     # Write the data
