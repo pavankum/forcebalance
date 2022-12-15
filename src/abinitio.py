@@ -742,7 +742,7 @@ class AbInitio(Target):
             if i % 100 == 0:
                 logger.debug("\rIncrementing quantities for snapshot %i\r" % i)
             # Build Boltzmann weights and increment partition function.
-            P   = self.energy_wts[i]
+            P   = self.energy_wts[i] #boltz_wts[i]
             Z  += P
             # Load reference (QM) data
             Q[0] = self.eqm[i]
