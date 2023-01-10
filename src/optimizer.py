@@ -996,9 +996,9 @@ class Optimizer(forcebalance.BaseClass):
                         self.x_best = X
                         self.prev_bad = False
                         if self.print_vals:
-                            logger.info('\n')
+                            logger.info('\n \n \n')
                             bar = printcool("Current Mathematical Parameters:",color=5)
-                            #self.FF.print_map(vals=["% .4e" % i for i in mvals])
+                            self.FF.print_map(vals=["% .4e" % i for i in mvals])
                         for Tgt in self.Objective.Targets:
                             Tgt.meta_indicate()
                         self.Objective.Indicate()
@@ -1057,14 +1057,8 @@ class Optimizer(forcebalance.BaseClass):
             #                                                              upper=self.mvals0+self.trust0*np.ones(self.np),schedule='boltzmann', full_output=True)
 
             temp = 10000.0
-            while temp > .09:
-                try:
-                    bounds = np.vstack((self.mvals0-1.0*self.trust0*np.ones(self.np), self.mvals0+ 1.0*self.trust0*np.ones(self.np))).T
-                    result = optimize.dual_annealing(xwrap(self.Objective.Full), x0=self.mvals0, bounds=bounds, initial_temp=temp, maxiter=200)
-                    break
-                except RuntimeError as e:
-                    # self.trust0 *= 1.1
-                    logger.error("\nAnneal fail, reducing trust radius to {} temperature {}\n".format(self.trust0, temp))
+            bounds = np.vstack((self.mvals0-1.0*abs(self.trust0)*np.ones(self.np), self.mvals0+ 1.0*abs(self.trust0)*np.ones(self.np))).T
+            result = optimize.dual_annealing(xwrap(self.Objective.Full), x0=self.mvals0, bounds=bounds, initial_temp=temp, maxfun=self.maxstep*10)
 
             scodes = {0 : "Points no longer changing.",
                       1 : "Cooled to final temperature.",
