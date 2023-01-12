@@ -1056,7 +1056,7 @@ class Optimizer(forcebalance.BaseClass):
             #xmin, Jmin, T, feval, iters, accept, status = optimize.anneal(xwrap(self.Objective.Full), self.mvals0, lower=self.mvals0-1*self.trust0*np.ones(self.np),
             #                                                              upper=self.mvals0+self.trust0*np.ones(self.np),schedule='boltzmann', full_output=True)
 
-            temp = 10000.0
+            temp = 600.0
             bounds = np.vstack((self.mvals0-1.0*abs(self.trust0)*np.ones(self.np), self.mvals0+ 1.0*abs(self.trust0)*np.ones(self.np))).T
             result = optimize.dual_annealing(xwrap(self.Objective.Full), x0=self.mvals0, bounds=bounds, initial_temp=temp, maxfun=self.maxstep*10)
 
