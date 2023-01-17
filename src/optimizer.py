@@ -1055,10 +1055,11 @@ class Optimizer(forcebalance.BaseClass):
             printcool("Minimizing Objective Function using Simulated Annealing" , ansi=1, bold=1)
             #xmin, Jmin, T, feval, iters, accept, status = optimize.anneal(xwrap(self.Objective.Full), self.mvals0, lower=self.mvals0-1*self.trust0*np.ones(self.np),
             #                                                              upper=self.mvals0+self.trust0*np.ones(self.np),schedule='boltzmann', full_output=True)
-
-            temp = 600.0
-            bounds = np.vstack((self.mvals0-1.0*abs(self.trust0)*np.ones(self.np), self.mvals0+ 1.0*abs(self.trust0)*np.ones(self.np))).T
-            result = optimize.dual_annealing(xwrap(self.Objective.Full), x0=self.mvals0, bounds=bounds, initial_temp=temp, maxfun=self.maxstep*10)
+            # Turning off local minimizer by setting no_local_search=True
+            # Expanding mval bounds to 2*mval values for better exploration
+            temp = 5230.0 # default temperature
+            bounds = np.vstack((self.mvals0 - 2.0*abs(self.trust0)*np.ones(self.np), self.mvals0 + 2.0*abs(self.trust0)*np.ones(self.np))).T
+            result = optimize.dual_annealing(xwrap(self.Objective.Full), x0=self.mvals0, bounds=bounds, initial_temp=temp, maxiter=self.maxstep, no_local_search=True)
 
             scodes = {0 : "Points no longer changing.",
                       1 : "Cooled to final temperature.",
