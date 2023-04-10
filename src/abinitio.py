@@ -217,6 +217,8 @@ class AbInitio(Target):
         self.save_vmvals = {}
         self.set_option(None, 'shots', val=self.ns)
         self.M_orig = None
+    def switching_function(x, w):
+            return 0.5 + 0.5 * np.tanh(x/w)
 
     def build_invdist(self, mvals):
         for i in self.pgrad:
@@ -651,6 +653,11 @@ class AbInitio(Target):
             NCP1 += 3*(nnf + ntq)
         NP   = self.FF.np
         NS   = self.ns
+
+        def switching_function(x, w):
+            return 0.5 + 0.5 * np.tanh(x/w)
+        # def switching_function_forces(x, w):
+        #     return -0.5 * np.sech(x/w) * np.sech(x/w)
         #==============================================================#
         #            STEP 1: Form all of the arrays.                   #
         #==============================================================#
@@ -715,11 +722,27 @@ class AbInitio(Target):
             self.maxfatom = -1
             self.maxfshot = -1
             self.maxdf = 0.0
+
+        # Custom weights BSwope & PBehara Scheme
+        assert self.all_at_once == True
+        E_a = self.energy_upper * 4.184 # kcal/mol to kJ/mol
+        E_w = self.energy_denom * 4.184 # kcal/mol to kJ/mol # Using energy_denom for width
+        self.energy_wts = []
+        self.force_wts = []
+        for i in range(NS):
+            qm_energy = self.eqm[i]
+            M = M_all[i]
+            mm_energy = M[0]
+            ener_weight = switching_function(E_a - qm_energy, E_w) + switching_function(E_a - mm_energy, E_w)
+            self.energy_wts.append(ener_weight)
+        self.energy_wts /= sum(self.energy_wts)
+            # self.force_wts.append(100 * ener_weight)
+
         for i in range(NS):
             if i % 100 == 0:
                 logger.debug("\rIncrementing quantities for snapshot %i\r" % i)
             # Build Boltzmann weights and increment partition function.
-            P   = self.boltz_wts[i]
+            P   = self.energy_wts[i] #boltz_wts[i]
             Z  += P
             # Load reference (QM) data
             Q[0] = self.eqm[i]
@@ -735,6 +758,7 @@ class AbInitio(Target):
                     logger.debug("Shot %i\r" % i)
                 M = self.energy_force_transform_one(i)
                 M_all[i,:] = M.copy()
+
             # MM - QM difference
             X     = M-Q
             # For asymmetric fit, MM energies lower than QM are given a boost factor

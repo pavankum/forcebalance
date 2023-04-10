@@ -27,6 +27,7 @@ from collections import OrderedDict
 import random
 import time, datetime
 from forcebalance.output import getLogger, DEBUG, CleanStreamHandler
+import glob
 logger = getLogger(__name__)
 
 # Global variable corresponding to the iteration number.
@@ -887,7 +888,8 @@ class Optimizer(forcebalance.BaseClass):
             Result = self.Objective.Full(xk_,0,verbose=False,customdir="micro_%02i" % search_fun.micro)['X'] - data['X']
 
             if not self.retain_micro_outputs:
-                shutil.rmtree("micro_%02i" % search_fun.micro)
+                for microo in glob.glob("**/micro_*", recursive=True):
+                    shutil.rmtree(microo)
 
             logger.info("Hessian diagonal search: H%+.4f*I, length %.4e, result % .4e\n" % ((L-1)**2,np.linalg.norm(dx),Result))
             search_fun.micro += 1
@@ -989,12 +991,12 @@ class Optimizer(forcebalance.BaseClass):
                 fout.evals += 1
                 X, G, H = [Result[i] for i in ['X','G','H']]
                 if callback:
-                    if X <= self.x_best or self.x_best is None:
+                    if self.x_best is None or X <= self.x_best:
                         color = "\x1b[92m"
                         self.x_best = X
                         self.prev_bad = False
                         if self.print_vals:
-                            logger.info('\n')
+                            logger.info('\n \n \n')
                             bar = printcool("Current Mathematical Parameters:",color=5)
                             self.FF.print_map(vals=["% .4e" % i for i in mvals])
                         for Tgt in self.Objective.Targets:
@@ -1051,8 +1053,14 @@ class Optimizer(forcebalance.BaseClass):
             return optimize.fmin(xwrap(self.Objective.Full),self.mvals0,ftol=self.convergence_objective,xtol=self.convergence_step,maxiter=self.maxstep,maxfun=self.maxstep*10)
         elif Algorithm == "anneal":
             printcool("Minimizing Objective Function using Simulated Annealing" , ansi=1, bold=1)
-            xmin, Jmin, T, feval, iters, accept, status = optimize.anneal(xwrap(self.Objective.Full), self.mvals0, lower=self.mvals0-1*self.trust0*np.ones(self.np),
-                                                                          upper=self.mvals0+self.trust0*np.ones(self.np),schedule='boltzmann', full_output=True)
+            #xmin, Jmin, T, feval, iters, accept, status = optimize.anneal(xwrap(self.Objective.Full), self.mvals0, lower=self.mvals0-1*self.trust0*np.ones(self.np),
+            #                                                              upper=self.mvals0+self.trust0*np.ones(self.np),schedule='boltzmann', full_output=True)
+            # Turning off local minimizer by setting no_local_search=True
+            # Expanding mval bounds to 2*mval values for better exploration
+            temp = 5230.0 # default temperature
+            bounds = np.vstack((self.mvals0 - 2.0*abs(self.trust0)*np.ones(self.np), self.mvals0 + 2.0*abs(self.trust0)*np.ones(self.np))).T
+            result = optimize.dual_annealing(xwrap(self.Objective.Full), x0=self.mvals0, bounds=bounds, initial_temp=temp, maxiter=self.maxstep, no_local_search=True)
+
             scodes = {0 : "Points no longer changing.",
                       1 : "Cooled to final temperature.",
                       2 : "Maximum function evaluations reached.",
@@ -1060,11 +1068,11 @@ class Optimizer(forcebalance.BaseClass):
                       4 : "Maximum accepted query locations reached.",
                       5 : "Final point not the minimum amongst encountered points."}
             logger.info("Simulated annealing info:\n")
-            logger.info("Status: %s \n" % scodes[status])
-            logger.info("Function evaluations: %i" % feval)
-            logger.info("Cooling iterations:   %i" % iters)
-            logger.info("Tests accepted:       %i" % iters)
-            return xmin
+            logger.info("Status: %s \n" % result.message)
+            logger.info("Function evaluations: %i" % result.nfev)
+            logger.info("Cooling iterations:   %i" % result.nit)
+            logger.info("Tests accepted:       %i" % result.nit)
+            return result.x
         elif Algorithm == "basinhopping":
             printcool("Minimizing Objective Function using Basin Hopping Method" , ansi=1, bold=1)
             T = xwrap(self.Objective.Full)(self.mvals0)

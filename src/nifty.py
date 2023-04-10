@@ -882,7 +882,7 @@ def getWQIds():
     global WQIDS
     return WQIDS
 
-def createWorkQueue(wq_port, debug=True, name=package):
+def createWorkQueue(wq_port, debug=False, name=package):
     global WORK_QUEUE
     if debug:
         work_queue.set_debug_flag('all')
@@ -902,7 +902,7 @@ def destroyWorkQueue():
     WORK_QUEUE = None
     WQIDS = defaultdict(list)
 
-def queue_up(wq, command, input_files, output_files, tag=None, tgt=None, verbose=True, print_time=60):
+def queue_up(wq, command, input_files, output_files, tag=None, tgt=None, verbose=False, print_time=60):
     """
     Submit a job to the Work Queue.
 
@@ -931,7 +931,7 @@ def queue_up(wq, command, input_files, output_files, tag=None, tgt=None, verbose
     else:
         WQIDS["None"].append(taskid)
 
-def queue_up_src_dest(wq, command, input_files, output_files, tag=None, tgt=None, verbose=True, print_time=60):
+def queue_up_src_dest(wq, command, input_files, output_files, tag=None, tgt=None, verbose=False, print_time=60):
     """
     Submit a job to the Work Queue.  This function is a bit fancier in that we can explicitly
     specify where the input files come from, and where the output files go to.
@@ -1014,8 +1014,8 @@ def wq_wait1(wq, wait_time=10, wait_intvl=1, print_time=60, verbose=False):
                 % (wq.stats.tasks_running, wq.stats.tasks_waiting, wq.stats.tasks_dispatched, wq.stats.tasks_submitted, wq.stats.tasks_done))
             logger.info("Data: %i / %i kb sent/received\n" % (int(wq.stats.bytes_sent/1024), int(wq.stats.bytes_received/1024)))
         else:
-            logger.info("\r%s : %i/%i workers busy; %i/%i jobs complete  \r" %\
-            (time.ctime(), wq.stats.workers_busy, wq.stats.workers_connected, wq.stats.tasks_done, wq.stats.tasks_submitted))
+            #logger.info("\r%s : %i/%i workers busy; %i/%i jobs complete  \r" %\
+            #(time.ctime(), wq.stats.workers_busy, wq.stats.workers_connected, wq.stats.tasks_done, wq.stats.tasks_submitted))
             if time.time() - wq_wait1.t0 > 900:
                 wq_wait1.t0 = time.time()
                 logger.info('\n')
