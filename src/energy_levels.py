@@ -10,7 +10,7 @@ from __future__ import division
 import os
 from collections import OrderedDict
 from copy import deepcopy
-
+from itertools import combinations
 import numpy as np
 from forcebalance.finite_difference import f12d3p, fdwrap, in_fd
 from forcebalance.molecule import Molecule
@@ -313,24 +313,24 @@ class EnergyLevelsTarget(Target):
 
             if self.attenuate:
                 # Attenuate energies by an amount proportional to their
-                # value above the minimum and also including ddE.
-                #
-
-                E_a = self.energy_upper
-                E_w = self.e_width
+                # value above the minimum.
+                eqm1 = self.eqm - np.min(self.eqm)
+                denom = self.energy_denom
+                upper = self.energy_upper
                 self.wts = np.ones(self.ns)
-                # weight = 1 + 1    if dE_QM < E_a, dE_MM < E_a
-                #        = 1 + 0    if dE_QM < E_a, dE_MM > E_a
-                #        = 0 + 1    if dE_QM > E_a, dE_MM < E_a
-                #        = 0 + 0    if dE_QM > E_a, dE_MM > E_a
                 for i in range(self.ns):
-                    self.wts[i] = switching_function(E_a - self.eqm[i], E_w) + switching_function(E_a - compute.emm[i], E_w)
+                    if eqm1[i] > upper:
+                        self.wts[i] = 0.0
+                    elif eqm1[i] < denom:
+                        self.wts[i] = 1.0 / denom
+                    else:
+                        self.wts[i] = 1.0 / np.sqrt(
+                            denom ** 2 + (eqm1[i] - denom) ** 2)
             else:
                 self.wts = np.ones(self.ns)
 
             # Normalize weights.
             self.wts /= sum(self.wts)
-            # print(ddE)
 
             if indicate:
                 if self.writelevel > 0:
@@ -510,7 +510,13 @@ class EnergyLevelsTarget(Target):
         Answer['X'] = np.dot(V, V)
 
         # Energy RMSE
-        e_rmse = np.sqrt(np.dot(self.wts, (compute.emm - self.eqm) ** 2))
+        # e_rmse = 0 #np.sqrt(np.dot(self.wts, (compute.emm - self.eqm) ** 2))
+        indcs = combinations(range(len(compute.emm)), 2)
+        relative_e_err = 0
+        for a, b in indcs:
+            relative_e_err = (self.eqm[a] - self.eqm[b]) - (compute.emm[a] -
+                                                   compute.emm[b])
+        e_rmse = (1/len(indcs)) * np.sqrt(np.square(relative_e_err))
         # IC RMSE
         if self.calc_ic:
             r = (np.sqrt(self.wts) / 1 * compute.total_ic_diff)
