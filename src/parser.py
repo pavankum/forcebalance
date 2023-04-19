@@ -227,7 +227,8 @@ tgt_opts_types = {
                  "adapt_errors"     : (0, 50, 'Adapt to simulation uncertainty by combining property estimations and adjusting simulation length.', 'Condensed phase property targets', 'liquid'),
                  "force_average"    : (0, -50, 'Average over all atoms when normalizing force errors.', 'Force matching', 'abinitio'),
                  "remote_backup"    : (0, -50, 'When running remote target, back up files at the remote location.', 'Liquid, lipid and remote targets', 'liquid, lipid, remote'),
-                 "pure_num_grad"    : (0, -50, 'Pure numerical gradients -- launch two additional simulations for each perturbed forcefield parameter, and compute derivatives using 3-point formula. (This is very expensive and should only serve as a sanity check)')
+                 "pure_num_grad"    : (0, -50, 'Pure numerical gradients -- launch two additional simulations for each perturbed forcefield parameter, and compute derivatives using 3-point formula. (This is very expensive and should only serve as a sanity check)'),
+                 "calc_ic"        : (0, 110, 'Calculate internal coordinates rmse or not for energy levels target', 'Energy levels target', 'energylevels'),
                  },
     'floats'  : {"weight"       : (1.0, 150, 'Weight of the target (determines its importance vs. other targets)', 'All targets (important)'),
                  "energy_denom" : (1.0, 100, 'Energy denominator in kcal/mol for objective function and lower energy limit for attenuating weights where applicable', 'Multiple targets that involve realtive energies', 'abinitio, binding, hydration, interaction, torsionprofile'),
@@ -273,6 +274,7 @@ tgt_opts_types = {
                  "vdw_cutoff"        : (None, -2, 'Cutoff for vdW interactions if different from other nonbonded interactions', 'Condensed phase property targets', 'liquid'),
                  "liquid_fdiff_h" : (1e-2, 0, 'Step size for finite difference derivatives for liquid targets in pure_num_grad', 'Condensed phase property targets', 'liquid'),
                  "restrain_k"     : (1.0, 0, 'Force constant for harmonic positional energy restraints', 'Torsion profile with MM relaxation target', 'torsionprofile'),
+                 "e_width"        : (1.0, 0, 'Width in the switching function, 0.5 + 0.5 * tanh((E_upper - E)/e_width), narrow means steep switch', 'Energy levels target', 'energylevels'),
                  },
     'sections': {}
     }
