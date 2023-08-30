@@ -514,9 +514,10 @@ class EnergyLevelsTarget(Target):
         indcs = combinations(range(len(compute.emm)), 2)
         relative_e_err = 0
         for a, b in indcs:
-            relative_e_err = (self.eqm[a] - self.eqm[b]) - (compute.emm[a] -
+            relative_e_err += (self.eqm[a] - self.eqm[b]) - (compute.emm[a] -
                                                    compute.emm[b])
-        e_rmse = (1/len(indcs)) * np.sqrt(np.square(relative_e_err))
+        uniq_combs = len(compute.emm) * (len(compute.emm) - 1)/2
+        e_rmse = (1/uniq_combs) * np.sqrt(np.square(relative_e_err))
         # IC RMSE
         if self.calc_ic:
             r = (np.sqrt(self.wts) / 1 * compute.total_ic_diff)
