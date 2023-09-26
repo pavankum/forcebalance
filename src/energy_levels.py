@@ -250,6 +250,62 @@ class EnergyLevelsTarget(Target):
         def switching_function(x, w):
             return 0.5 + 0.5 * np.tanh(x/w)
 
+        def custom_loss(reference_list, predicted_list, order_weight=100.0,
+                        difference_weight=1.0):
+            """
+            Custom loss function that combines two components:
+            1. Order preservation loss
+            2. Relative differences loss
+
+            Parameters:
+            reference_list (list): The reference list of numbers.
+            predicted_list (list): The list of numbers predicted by your model.
+            order_weight (float): Weight for the order preservation component.
+            difference_weight (float): Weight for the relative differences component.
+
+            Returns:
+            float: Combined loss value.
+            """
+
+            # Order preservation loss (using Kendall's tau)
+            def kendall_tau(list1, list2):
+                # Calculate Kendall's tau-b correlation coefficient
+                concordant_pairs = discordant_pairs = 0
+                n = len(list1)
+
+                for i in range(n):
+                    for j in range(i + 1, n):
+                        a = list1[i] - list1[j]
+                        b = list2[i] - list2[j]
+
+                        if a * b > 0:
+                            concordant_pairs += 1
+                        elif a * b < 0:
+                            discordant_pairs += 1
+
+                tau = (concordant_pairs - discordant_pairs) / (
+                            0.5 * n * (n - 1))
+
+                return tau
+
+            order_loss = 1.0 - kendall_tau(reference_list, predicted_list)
+
+            # pairwise differences
+            indcs = combinations(range(len(predicted_list)), 2)
+            relative_e_err = []
+
+            for a, b in indcs:
+                ddE = (predicted_list[a] - predicted_list[b]) - (reference_list[a] - reference_list[b])
+                ddE = np.abs(ddE)
+                ddE = np.exp(1+ddE) * ddE
+                relative_e_err.append(ddE)
+            uniq_combs = len(predicted_list) * (len(predicted_list) - 1)/2
+            pairwise_weighted_diff = [difference_weight * it/uniq_combs for it
+                                      in
+                                      relative_e_err]
+            pairwise_weighted_diff.append(order_weight * order_loss)
+            return np.array(pairwise_weighted_diff)
+
         def compute(mvals_, indicate=False):
             self.FF.make(mvals_)
             M_opts = None
@@ -498,8 +554,18 @@ class EnergyLevelsTarget(Target):
                         logger.warning("matplotlib package is needed to make torsion profile plots\n")
 
 
-            # print("ddE contrib.:", (np.sqrt(self.wts)) * (compute.emm - self.eqm), "IC_rmsd:", compute.total_ic_diff)
-            return  (np.sqrt(self.wts)) * (compute.emm - self.eqm) #+ 0.1 * (np.sqrt(self.wts)/2) * compute.total_ic_diff
+            # # print("ddE contrib.:", (np.sqrt(self.wts)) * (compute.emm - self.eqm), "IC_rmsd:", compute.total_ic_diff)
+            # indcs = combinations(range(len(compute.emm)), 2)
+            # relative_e_err = []
+            # for a, b in indcs:
+            #     ddE = np.abs((compute.emm[a] - compute.emm[b]) -
+            #                  (self.eqm[a] - self.eqm[b]))
+            #     ddE = np.exp(1+ddE) * ddE
+            #     relative_e_err.append(ddE)
+            # # uniq_combs = len(compute.emm) * (len(compute.emm) - 1)/2
+            # pairwise_weighted_diff = np.array(relative_e_err)
+
+            return  custom_loss(self.eqm, compute.emm)
 
         compute.emm = None
         compute.rmsd = None
@@ -510,14 +576,8 @@ class EnergyLevelsTarget(Target):
         Answer['X'] = np.dot(V, V)
 
         # Energy RMSE
-        # e_rmse = 0 #np.sqrt(np.dot(self.wts, (compute.emm - self.eqm) ** 2))
-        indcs = combinations(range(len(compute.emm)), 2)
-        relative_e_err = 0
-        for a, b in indcs:
-            relative_e_err += (self.eqm[a] - self.eqm[b]) - (compute.emm[a] -
-                                                   compute.emm[b])
-        uniq_combs = len(compute.emm) * (len(compute.emm) - 1)/2
-        e_rmse = (1/uniq_combs) * np.sqrt(np.square(relative_e_err))
+        e_rmse = np.sqrt(np.dot(self.wts, (compute.emm - self.eqm)**2))
+
         # IC RMSE
         if self.calc_ic:
             r = (np.sqrt(self.wts) / 1 * compute.total_ic_diff)
