@@ -379,11 +379,11 @@ class EnergyLevelsTarget(Target):
                 )
                 ddE = np.abs(ddE)
                 relative_e_err.append(ddE)
-            uniq_combs = len(predicted_list) * (len(predicted_list) - 1) / 2
+            sqrt_uniq_combs = np.sqrt(len(predicted_list) * (len(predicted_list) - 1) / 2)
             pairwise_weighted_diff = [
-                difference_weight * it / uniq_combs for it in relative_e_err
+                difference_weight * it / sqrt_uniq_combs for it in relative_e_err
             ]
-            pairwise_weighted_diff.append(order_weight * order_loss)
+            pairwise_weighted_diff.append(np.sqrt(order_weight * order_loss))
             return np.array(pairwise_weighted_diff)
 
         def compute(mvals_, indicate=False):
